@@ -79,54 +79,50 @@ class Seat(models.Model):
         return f"{self.row_name}{self.seat_number}"
     
 class Showtime(models.Model):
-    movie = models.ForeignKey(
-        Movie,
-        on_delete=models.CASCADE,
-        related_name='showtimes'
-    )
-    room = models.ForeignKey(
-        Room,
-        on_delete=models.CASCADE,
-        related_name='showtimes'
-    )
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='showtimes')
+    room = models.ForeignKey('rooms.Room', on_delete=models.CASCADE, related_name='showtimes')
 
-    price = models.DecimalField(
-        max_digits=12,
-        decimal_places=2
-    )
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField(blank=True, null=True)
+
+    price = models.DecimalField(max_digits=12, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+
+        # 1. tự tính end_time từ movie.duration
+        if self.movie and self.start_time:
+            self.end_time = self.start_time + timedelta(minutes=self.movie.duration)
+
+        # 2. validate
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
     def clean(self):
 
-            # =========================
-            # CHO PHÉP CÁCH NHAU 30 PHÚT
-            # =========================
+        if not self.movie or not self.start_time:
+            return
 
-            existing_showtimes = Showtime.objects.filter(
-                room=self.room
-            ).exclude(id=self.id)
+        buffer = timedelta(minutes=30)
 
-            for show in existing_showtimes:
+        # lấy tất cả suất chiếu trong cùng phòng
+        qs = Showtime.objects.filter(room=self.room).exclude(id=self.id)
 
-                # khoảng nghỉ 30 phút
-                buffer_time = timedelta(minutes=30)
+        for show in qs:
 
-                # nếu bị chồng giờ
-                if (
-                    self.start_time < show.end_time + buffer_time
-                    and
-                    self.end_time > show.start_time - buffer_time
-                ):
+            # interval có buffer
+            new_start = self.start_time - buffer
+            new_end = self.end_time + buffer
 
-                    raise ValidationError(
-                        'Phòng này cần cách suất chiếu khác ít nhất 30 phút'
-                    )
+            old_start = show.start_time
+            old_end = show.end_time
 
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        return super().save(*args, **kwargs)
+            # overlap chuẩn toán học
+            if new_start < old_end and new_end > old_start:
+                raise ValidationError(
+                    "Phòng này cần cách suất chiếu khác ít nhất 30 phút"
+                )
 
     def __str__(self):
         return f"{self.movie.title} - {self.start_time}"
@@ -135,7 +131,5 @@ class Showtime(models.Model):
         ordering = ['start_time']
         indexes = [
             models.Index(fields=['room', 'start_time']),
-            models.Index(fields=['movie', 'start_time']),
         ]
-
 

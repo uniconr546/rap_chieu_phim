@@ -126,6 +126,7 @@ export default function AdminShowtimes() {
   // =========================
   // CREATE SHOWTIME
   // =========================
+ 
 
   const handleSaveShowtime = async () => {
 
@@ -146,14 +147,14 @@ export default function AdminShowtimes() {
     try {
 
       // ghép ngày + giờ
-      const startDateTime =
-        `${showDate}T${showTime}:00`;
+       const startDateTime = new Date(
+          `${showDate}T${showTime}:00`
+          ).toISOString();
 
     await api.post('/showtimes/', {
         movie: Number(selectedMovie),
         room: Number(selectedRoom),
-        start_time: `${showDate}T${showTime}:00`,
-        end_time: `${showDate}T23:00:00`,
+        start_time: startDateTime,
         price: Number(ticketPrice)
     });
 
@@ -217,24 +218,20 @@ export default function AdminShowtimes() {
   // =========================
 
   const formatDate = (datetime: string) => {
-
-    return new Date(datetime)
-      .toLocaleDateString('vi-VN');
-
+    return new Date(datetime).toLocaleDateString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+    });
   };
 
   const formatTime = (datetime: string) => {
-
-    return new Date(datetime)
-      .toLocaleTimeString(
-        'vi-VN',
-        {
-          hour: '2-digit',
-          minute: '2-digit',
-        }
-      );
-
+    return new Date(datetime).toLocaleTimeString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
+
+
 
   // =========================
   // UI

@@ -12,7 +12,9 @@ from .views import (
     generate_seats,
 
     showtimes,
-    showtime_detail
+    showtime_detail,
+    delete_showtime,
+    update_showtime
 )
 
 urlpatterns = [
@@ -50,7 +52,8 @@ urlpatterns = [
     # SHOWTIMES
     # =========================
     path('showtimes/', showtimes),
-
+    path('showtimes/<int:pk>/delete/', delete_showtime),
+    path('showtimes/<int:pk>/update/', update_showtime),
     path(
         'showtimes/<int:pk>/',
         showtime_detail

@@ -406,3 +406,53 @@ def showtime_detail(request, pk):
             "error": "Không tìm thấy suất chiếu"
         }, status=404)
     
+
+# =========================================
+# DELETE SHOWTIME
+# =========================================
+@api_view(['DELETE'])
+def delete_showtime(request, pk):
+
+    try:
+        showtime = Showtime.objects.get(id=pk)
+        showtime.delete()
+
+        return Response({
+            "message": "Xóa suất chiếu thành công"
+        }, status=200)
+
+    except Showtime.DoesNotExist:
+        return Response({
+            "error": "Không tìm thấy suất chiếu"
+        }, status=404)
+    
+# =========================================
+# UPDATE SHOWTIME
+# =========================================
+@api_view(['PUT', 'PATCH'])
+def update_showtime(request, pk):
+
+    try:
+        showtime = Showtime.objects.get(id=pk)
+
+    except Showtime.DoesNotExist:
+        return Response({
+            "error": "Không tìm thấy suất chiếu"
+        }, status=404)
+
+    # PUT = update full, PATCH = update partial
+    serializer = ShowtimeSerializer(
+        showtime,
+        data=request.data,
+        partial=True
+    )
+
+    if serializer.is_valid():
+        serializer.save()
+
+        return Response({
+            "message": "Cập nhật suất chiếu thành công",
+            "data": serializer.data
+        }, status=200)
+
+    return Response(serializer.errors, status=400)
