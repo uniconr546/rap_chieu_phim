@@ -436,3 +436,22 @@ class CheckInSerializer(
             )
 
         return value
+    
+class BookingSerializer(
+    serializers.ModelSerializer
+):
+
+    showtime = ShowtimeSerializer(
+        read_only=True
+    )
+
+    seats = SeatSerializer(
+        many=True,
+        read_only=True
+    )
+
+    class Meta:
+
+        model = Booking
+
+        fields = '__all__'

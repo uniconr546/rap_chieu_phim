@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Movie, Genre
+from theaters.models import Showtime
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -42,7 +43,8 @@ class MovieSerializer(serializers.ModelSerializer):
             'genres',
             'genre_ids',
             'created_at',
-            'updated_at'
+            'updated_at',
+            'showtimes'
         ]
 
     def create(self, validated_data):
@@ -81,3 +83,28 @@ class MovieSerializer(serializers.ModelSerializer):
             instance.genres.set(genres)
 
         return instance
+    
+class MovieSimpleSerializer(
+    serializers.ModelSerializer
+):
+
+    class Meta:
+
+        model = Movie
+
+        fields = ['id', 'title']
+
+
+class ShowtimeSerializer(
+    serializers.ModelSerializer
+):
+
+    movie = MovieSimpleSerializer(
+        read_only=True
+    )
+
+    class Meta:
+
+        model = Showtime
+
+        fields = '__all__'

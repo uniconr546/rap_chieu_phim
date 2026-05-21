@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'payments',
     'concessions',
     'rooms',
+    'promotions',
 ]
 
 REST_FRAMEWORK = {

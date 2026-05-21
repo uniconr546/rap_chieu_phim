@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/services/api';
+import QRCode from 'react-qr-code'; 
 
 interface Concession {
   id: number;
@@ -46,6 +47,9 @@ export default function CheckoutPage({
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('banking');
+
+  const [showQR, setShowQR] =
+  useState(false);
 
   const [ticketInfo, setTicketInfo] =
     useState<TicketInfo>({
@@ -178,9 +182,16 @@ setTicketInfo({
   // =========================
   // PAYMENT
   // =========================
-  const handlePayment = async () => {
+const handlePayment = () => {
+  setShowQR(true);
+};
+const completePayment =
+  async () => {
+
     try {
+
       const payload = {
+
         payment_method:
           paymentMethod,
 
@@ -199,62 +210,21 @@ setTicketInfo({
             })),
       };
 
-      // =========================
-      // BANKING
-      // =========================
-      if (
-        paymentMethod === 'banking'
-      ) {
-        await api.post(
-          `/bookings/${resolvedParams.id}/payment/`,
-          payload
-        );
+      await api.post(
+        `/bookings/${resolvedParams.id}/payment/`,
+        payload
+      );
 
-        alert(
-          'Thanh toán bằng thẻ thành công!'
-        );
+      alert(
+        'Thanh toán thành công!'
+      );
 
-        router.push('/');
-      }
+      setShowQR(false);
 
-      // =========================
-      // MOMO
-      // =========================
-      else if (
-        paymentMethod === 'momo'
-      ) {
-        alert(
-          'Đang chuyển sang thanh toán MoMo...'
-        );
+      router.push('/');
 
-        // DEMO
-        await api.post(
-          `/bookings/${resolvedParams.id}/payment/`,
-          payload
-        );
-
-        router.push('/');
-      }
-
-      // =========================
-      // VNPAY
-      // =========================
-      else if (
-        paymentMethod === 'vnpay'
-      ) {
-        alert(
-          'Đang chuyển sang VNPAY...'
-        );
-
-        // DEMO
-        await api.post(
-          `/bookings/${resolvedParams.id}/payment/`,
-          payload
-        );
-
-        router.push('/');
-      }
     } catch (error) {
+
       console.log(error);
 
       alert(
@@ -658,6 +628,77 @@ setTicketInfo({
         </div>
 
       </div>
+
+      {showQR && (
+
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
+
+          <div className="bg-darkPanel p-8 rounded-3xl w-[380px] border border-gray-700 text-center shadow-2xl">
+
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Quét mã thanh toán
+            </h2>
+
+            <p className="text-gray-400 mb-6">
+              {paymentMethod.toUpperCase()}
+            </p>
+
+            {/* QR */}
+            <div className="bg-white p-4 rounded-2xl inline-block mb-6">
+
+              <QRCode
+                size={220}
+                value={JSON.stringify({
+                  method:
+                    paymentMethod,
+
+                  amount:
+                    finalTotal,
+
+                  booking:
+                    resolvedParams.id,
+                })}
+              />
+
+            </div>
+
+            <p className="text-neonYellow text-2xl font-black mb-6">
+
+              {finalTotal.toLocaleString(
+                'vi-VN'
+              )}{' '}
+              đ
+
+            </p>
+
+            {/* BUTTONS */}
+            <div className="flex gap-3">
+
+              <button
+                onClick={() =>
+                  setShowQR(false)
+                }
+                className="flex-1 py-3 rounded-xl bg-gray-700 text-white hover:bg-gray-600"
+              >
+                Huỷ
+              </button>
+
+              <button
+                onClick={
+                  completePayment
+                }
+                className="flex-1 py-3 rounded-xl bg-netflix text-white font-bold hover:bg-red-700"
+              >
+                Hoàn thành
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
     </div>
   );

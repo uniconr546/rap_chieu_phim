@@ -79,6 +79,11 @@ urlpatterns = [
         include('concessions.urls')
     ),
 
+    path(
+    'api/promotions/',
+    include('promotions.urls')
+),
+
 ]
 
 # =====================================

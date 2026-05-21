@@ -5,7 +5,9 @@ from .views import (
     hold_seat,
     checkin,
     BookingDetailView,
-    booked_seats
+    booked_seats,
+    payment,
+    my_bookings
 )
 
 urlpatterns = [
@@ -50,5 +52,15 @@ urlpatterns = [
     'hold-seat/',
     hold_seat
     ),
+
+        path(
+        '<int:booking_id>/payment/',
+        payment
+    ),
+
+    path(
+    'my-bookings/',
+    my_bookings
+),  
 
 ]

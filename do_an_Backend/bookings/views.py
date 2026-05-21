@@ -21,7 +21,8 @@ from .models import (
 from theaters.models import Showtime, Seat
 from concessions.models import Concession
 
-from .serializers import BookingDetailSerializer
+from .serializers import BookingDetailSerializer, BookingSerializer
+
 
 
 # =====================================================
@@ -50,16 +51,10 @@ def create_booking(request):
 
         with transaction.atomic():
 
-            # =========================
-            # SHOWTIME
-            # =========================
             showtime = Showtime.objects.select_for_update().get(
                 id=showtime_id
             )
 
-            # =========================
-            # CREATE BOOKING
-            # =========================
             booking = Booking.objects.create(
                 user=request.user,
                 showtime=showtime,
@@ -70,19 +65,11 @@ def create_booking(request):
 
             total = 0
 
-            # =========================
-            # LẤY GHẾ
-            # =========================
             seats = Seat.objects.filter(
                 id__in=seat_ids,
                 room=showtime.room
             )
 
-            print("SEATS:", seats)
-
-            # =========================
-            # BOOKING SEATS
-            # =========================
             for seat in seats:
 
                 existing = BookingSeat.objects.filter(
@@ -91,55 +78,39 @@ def create_booking(request):
                 ).exists()
 
                 if existing:
-
                     return Response(
-                        {
-                            "error": f"Ghế {seat} đã được đặt"
-                        },
+                        {"error": f"Ghế {seat} đã được đặt"},
                         status=400
                     )
 
-                # tạo booking seat
+                # =========================
+                # GIÁ GHẾ
+                # =========================
+                seat_price = showtime.price
+
+                if seat.seat_type == 'vip':
+                    seat_price = 150000
+
+                elif seat.seat_type == 'sweetbox':
+                    seat_price = 190000
+
                 BookingSeat.objects.create(
                     booking=booking,
                     showtime=showtime,
                     seat=seat,
-                    price=showtime.price
+                    price=seat_price
                 )
 
-                # cộng tiền từng ghế
-                total += float(showtime.price)
+                total += seat_price
 
-            # =========================
-            # CONCESSIONS
-            # =========================
-            for item in concessions:
-
-                try:
-
-                    concession = Concession.objects.get(
-                        id=item['concession_id']
-                    )
-
-                except Concession.DoesNotExist:
-
-                    return Response(
-                        {
-                            "error": "Concession không tồn tại"
-                        },
-                        status=400
-                    )
-
-                qty = item.get('quantity', 1)
-
-                BookingConcession.objects.create(
-                    booking=booking,
-                    concession=concession,
-                    quantity=qty,
-                    price=concession.price * qty
+                print(
+                    seat.row_name,
+                    seat.seat_number,
+                    seat.seat_type,
+                    seat_price
                 )
 
-                total += float(concession.price) * qty
+                print("TOTAL:", total)
 
             # =========================
             # UPDATE TOTAL
@@ -312,6 +283,49 @@ def payment(request, booking_id):
             'banking'
         )
 
+        concessions = request.data.get(
+            'concessions',
+            []
+        )
+
+        total = booking.total_price
+
+        # =========================
+        # ADD CONCESSIONS
+        # =========================
+        for item in concessions:
+
+            try:
+
+                concession = Concession.objects.get(
+                    id=item['concession_id']
+                )
+
+            except Concession.DoesNotExist:
+
+                return Response({
+                    "error": "Combo không tồn tại"
+                }, status=400)
+
+            quantity = item.get(
+                'quantity',
+                1
+            )
+
+            BookingConcession.objects.create(
+                booking=booking,
+                concession=concession,
+                quantity=quantity,
+                price=concession.price * quantity
+            )
+
+            total += concession.price * quantity
+
+        # =========================
+        # UPDATE BOOKING
+        # =========================
+        booking.total_price = total
+
         booking.status = 'paid'
 
         booking.save()
@@ -322,7 +336,9 @@ def payment(request, booking_id):
 
             "booking_id": booking.id,
 
-            "payment_method": payment_method
+            "payment_method": payment_method,
+
+            "total_price": total
 
         })
 
@@ -386,3 +402,18 @@ class BookingDetailView(RetrieveAPIView):
     serializer_class = BookingDetailSerializer
 
     permission_classes = [IsAuthenticated]
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_bookings(request):
+
+    bookings = Booking.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
+
+    serializer = BookingSerializer(
+        bookings,
+        many=True
+    )
+
+    return Response(serializer.data)
